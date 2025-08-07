@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sovereign-Cosmic Ecosystem: Interactive Strategy Dashboard v6</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony Neutrals -->
+    <!-- Application Structure Plan: The SPA is designed around the core strategic duality of the project: the "Global Purpose Entities" and the "Sovereign-Straddie Entities". This two-pillar structure forms the main navigation, allowing users to immediately grasp the foundational architecture. The user flow starts with a high-level overview, then invites exploration into these two pillars. From there, users can dive deeper into individual company details via interactive cards. Subsequent sections are dedicated to the "Strategy & Implementation," breaking down the complex execution plan into digestible, interactive components: a stakeholder map, a funding roadmap, a risk analysis tool, and a timeline. This structure was chosen over a linear report format to facilitate non-linear exploration, enabling different audiences (investors, community, directors) to access the information most relevant to them first, thereby enhancing usability and comprehension of this multifaceted ecosystem. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Ecosystem Structure -> Goal: Organize/Relationships -> Viz: Interactive HTML/CSS Diagram -> Interaction: Hover effects on pillars -> Justification: Visually represents the core two-pillar architecture. Library/Method: Tailwind CSS.
+        - Report Info: 10 Company Profiles -> Goal: Inform/Organize -> Viz: Interactive Cards -> Interaction: Click to expand details, Click to generate Director Profile, Pitch, or Risk Analysis via Gemini API -> Justification: Presents dense information in a compact format, with a suite of AI tools to accelerate planning, recruitment, and communication. Library/Method: Vanilla JS + Tailwind CSS + Gemini API.
+        - Report Info: Legal Structures -> Goal: Compare/Inform -> Viz: Donut Chart -> Interaction: Hover for tooltips -> Justification: Provides a quick, quantitative overview of the governance diversity. Library/Method: Chart.js.
+        - Report Info: Stakeholder Map -> Goal: Organize/Inform -> Viz: Tabbed Interface -> Interaction: Click to switch groups, Click to draft outreach email via Gemini API -> Justification: Segments stakeholders (with corrected name and context for MMEIC) and provides an AI tool to initiate contact respectfully. Library/Method: Vanilla JS + Tailwind CSS + Gemini API.
+        - Report Info: Funding Roadmap -> Goal: Show Change/Process -> Viz: Phased Bar Chart -> Interaction: Hover for details, Click to draft grant snippet via Gemini API -> Justification: Clearly illustrates the sequenced capital strategy and adds an AI tool to fast-track applications. Library/Method: Chart.js + Gemini API.
+        - Report Info: 12-Month Action Plan -> Goal: Show Change/Process -> Viz: Vertical Timeline -> Interaction: Scroll-based exploration -> Justification: Presents an aggressive, venture-speed execution plan in a chronological, quarterly format. Library/Method: HTML/CSS with Tailwind.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF8; /* Warm Neutral Background */
+            color: #3D3D3D;
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #A47F6A; /* Subtle Accent */
+        }
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #A47F6A;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .card {
+            transition: all 0.3s ease;
+            border: 1px solid #EAEAEA;
+        }
+        .card-header:hover {
+             cursor: pointer;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        }
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.7s ease-in-out;
+        }
+        .card.open .card-content {
+            max-height: 1500px;
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+        .tab-button.active {
+            background-color: #A47F6A;
+            color: #FFFFFF;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 2rem;
+            padding-left: 2.5rem;
+        }
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.25rem;
+            width: 1.25rem;
+            height: 1.25rem;
+            background-color: #D1C4B7; /* Neutral */
+            border-radius: 9999px;
+            border: 4px solid #FDFBF8;
+        }
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: 0.5rem;
+            top: 1.5rem;
+            bottom: 0;
+            width: 2px;
+            background-color: #EAEAEA;
+        }
+        .timeline-item:last-child::after {
+            display: none;
+        }
+        .gemini-button {
+            background-color: #6B5B50;
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+        .gemini-button:hover {
+            background-color: #A47F6A;
+        }
+        #ai-modal {
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #A47F6A;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-[#6B5B50] tracking-tight">Sovereign-Cosmic Ecosystem</h1>
+            <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">An AI-powered strategic dashboard for establishing a globally-scalable, regenerative framework, anchored on Minjerribah.</p>
+        </header>
+
+        <nav class="flex justify-center items-center border-b border-gray-200 mb-12 space-x-4 sm:space-x-8">
+            <a class="nav-link active py-4 text-sm sm:text-base font-medium" data-target="overview">Overview</a>
+            <a class="nav-link py-4 text-sm sm:text-base font-medium" data-target="entities">The Entities</a>
+            <a class="nav-link py-4 text-sm sm:text-base font-medium" data-target="strategy">Strategy & Implementation</a>
+        </nav>
+
+        <main>
+            <!-- Overview Section -->
+            <section id="overview" class="content-section active">
+                <div class="text-center max-w-4xl mx-auto">
+                    <h2 class="text-3xl font-bold text-[#6B5B50] mb-4">The Twin-Pillar Architecture</h2>
+                    <p class="text-gray-700 mb-8 leading-relaxed">The entire ecosystem is built on a symbiotic relationship between two core pillars: globally-focused ventures that provide scale and financial power, and a locally-anchored proving ground on Minjerribah that delivers tangible innovation and verified "playbooks". This section provides an interactive overview of this strategic flywheel, which is designed to de-risk the entire system and create a self-reinforcing cycle of growth and impact.</p>
+                </div>
+
+                <div class="grid md:grid-cols-5 gap-8 items-center">
+                    <div class="md:col-span-2 p-6 bg-white rounded-2xl shadow-sm border border-gray-200 text-center">
+                        <h3 class="text-2xl font-semibold text-[#A47F6A] mb-2">Global Purpose Entities</h3>
+                        <p class="text-gray-600">Four entities with planetary mission directives, providing scalable frameworks, technology, and capital. They are firewalled from the local fund to ensure their global focus remains unencumbered.</p>
+                    </div>
+
+                    <div class="text-center text-5xl text-[#D1C4B7] font-light flex flex-col items-center justify-center">
+                        <span class="transform rotate-90 md:rotate-0">⇋</span>
+                        <span class="text-sm font-medium text-gray-500 mt-2">Strategic Flywheel</span>
+                    </div>
+
+                    <div class="md:col-span-2 p-6 bg-white rounded-2xl shadow-sm border border-gray-200 text-center">
+                        <h3 class="text-2xl font-semibold text-[#A47F6A] mb-2">Sovereign-Straddie Entities</h3>
+                        <p class="text-gray-600">Six entities anchored to Minjerribah, focused on building a sovereign, regenerative local economy, generating intergenerational wealth and environmental sustainability for the island community.</p>
+                    </div>
+                </div>
+                 <div class="mt-12 p-6 bg-gray-50 rounded-2xl border border-gray-200">
+                    <h3 class="text-2xl font-semibold text-center text-[#6B5B50] mb-4">How the Flywheel Works</h3>
+                    <div class="grid md:grid-cols-2 gap-6 text-center">
+                        <div class="p-4">
+                             <p class="text-4xl mb-2">🌏 → 🏝️</p>
+                            <h4 class="font-bold text-lg text-[#A47F6A]">Global to Local</h4>
+                            <p class="text-gray-600">The global entities provide diversified catalytic capital, a pre-defined scaling pathway for Minjerribah's innovations, and a pipeline of international talent inspired by the mission.</p>
+                        </div>
+                        <div class="p-4">
+                             <p class="text-4xl mb-2">🏝️ → 🌏</p>
+                            <h4 class="font-bold text-lg text-[#A47F6A]">Local to Global</h4>
+                            <p class="text-gray-600">Minjerribah provides tangible proof. The high-risk R&D into energy, materials, and governance creates verified "narrative assets" that de-risk and fuel the global replication of the system.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Entities Section -->
+            <section id="entities" class="content-section">
+                <div class="text-center max-w-4xl mx-auto mb-12">
+                     <h2 class="text-3xl font-bold text-[#6B5B50] mb-4">The Ten Living Organisms</h2>
+                     <p class="text-gray-700 mb-8 leading-relaxed">The ecosystem is composed of ten distinct but interoperable legal entities. Four are designed for global scale, while six are anchored to the Minjerribah proving ground. Click on any card below to explore its specific mission, structure, and role. Use the ✨ AI tools to accelerate your planning, recruitment, and communications.</p>
+                </div>
+
+                <div id="entities-container" class="space-y-8"></div>
+
+                <div class="mt-16">
+                    <h3 class="text-2xl font-bold text-center text-[#6B5B50] mb-6">Ecosystem Legal Structures</h3>
+                    <p class="text-center text-gray-700 max-w-2xl mx-auto mb-8">The ecosystem utilizes a diverse range of legal structures, each chosen to best serve the entity's specific purpose, from charitable foundations to commercial enterprises and community trusts. This chart provides a snapshot of the governance architecture.</p>
+                    <div class="chart-container">
+                        <canvas id="legalStructureChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Strategy Section -->
+            <section id="strategy" class="content-section">
+                <div class="text-center max-w-4xl mx-auto mb-12">
+                     <h2 class="text-3xl font-bold text-[#6B5B50] mb-4">Strategy & Implementation</h2>
+                     <p class="text-gray-700 mb-8 leading-relaxed">This section translates the grand vision into an actionable roadmap. Explore the key stakeholders, funding strategy, risk analysis, and implementation timeline. Use the ✨ AI tools to draft communications and strategic documents instantly.</p>
+                </div>
+
+                <!-- Stakeholders -->
+                <div class="mb-16">
+                    <h3 class="text-2xl font-bold text-center text-[#6B5B50] mb-6">Stakeholder Engagement Matrix</h3>
+                    <p class="text-center text-gray-700 max-w-3xl mx-auto mb-8">Success requires building a powerful coalition. This matrix maps the key external relationships across government, community, and the private sector. Use the tabs to navigate between groups and the ✨ AI button to draft outreach emails.</p>
+                    <div class="flex justify-center mb-6 border-b border-gray-200">
+                        <button class="tab-button active px-4 py-2 -mb-px border-b-2 border-transparent" data-tab="government">Government</button>
+                        <button class="tab-button px-4 py-2 -mb-px border-b-2 border-transparent" data-tab="community">Community & Cultural</button>
+                        <button class="tab-button px-4 py-2 -mb-px border-b-2 border-transparent" data-tab="private">Private & Academic</button>
+                    </div>
+                    <div id="stakeholders-content" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200"></div>
+                </div>
+
+                <!-- Funding -->
+                <div class="mb-16">
+                    <h3 class="text-2xl font-bold text-center text-[#6B5B50] mb-6">Phased Funding Roadmap</h3>
+                    <p class="text-center text-gray-700 max-w-3xl mx-auto mb-8">The financial architecture is a sophisticated, multi-stage strategy that blends different capital types. This phased approach is designed to de-risk the ventures and protect the regenerative mission. Use the ✨ AI tool to draft grant application snippets.</p>
+                     <div class="chart-container h-[450px] md:h-[500px]">
+                        <canvas id="fundingChart"></canvas>
+                    </div>
+                    <div class="text-center mt-6">
+                         <button id="grant-snippet-button" class="gemini-button text-base font-medium py-3 px-6 rounded-md">
+                            ✨ Draft Grant Snippet
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Risk Analysis -->
+                <div class="mb-16">
+                    <h3 class="text-2xl font-bold text-center text-[#6B5B50] mb-6">AI-Powered Risk Analysis</h3>
+                    <p class="text-center text-gray-700 max-w-3xl mx-auto mb-8">Proactively identify and mitigate potential challenges. Select a company and use the ✨ AI tool to generate a preliminary risk register, covering financial, operational, regulatory, and community risks along with suggested mitigation strategies.</p>
+                    <div class="max-w-md mx-auto bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col sm:flex-row items-center gap-4">
+                        <select id="risk-analysis-selector" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#A47F6A]">
+                            <option value="all">Entire Ecosystem</option>
+                        </select>
+                        <button id="risk-analysis-button" class="gemini-button text-sm font-medium py-2 px-4 rounded-md w-full sm:w-auto flex-shrink-0">
+                            ✨ Analyze Risks
+                        </button>
+                    </div>
+                </div>
+
+
+                <!-- Timeline -->
+                <div>
+                    <h3 class="text-2xl font-bold text-center text-[#6B5B50] mb-6">12-Month Blitz Action Plan</h3>
+                     <p class="text-center text-gray-700 max-w-3xl mx-auto mb-8">An aggressive, venture-speed timeline to establish the ecosystem, launch pilots, and achieve critical momentum within the first year. This is the "all-in roll-out" in action.</p>
+                    <div id="timeline-container" class="max-w-3xl mx-auto"></div>
+                </div>
+
+            </section>
+        </main>
+    </div>
+
+    <!-- AI Modal -->
+    <div id="ai-modal" class="fixed inset-0 items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 md:max-w-2xl mx-auto mt-10 p-6 relative">
+            <button id="close-modal-button" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+            <h3 id="modal-title" class="text-2xl font-bold text-[#6B5B50] mb-4"></h3>
+            <div id="modal-content-area" class="relative">
+                <div id="modal-loader" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center hidden">
+                    <div class="loader"></div>
+                </div>
+                <textarea id="modal-content" class="w-full h-96 p-2 border border-gray-300 rounded-md bg-gray-50 focus:ring-2 focus:ring-[#A47F6A] focus:border-[#A47F6A]"></textarea>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2 justify-end">
+                <button id="copy-modal-button" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Copy Text</button>
+                <button id="regenerate-modal-button" class="gemini-button px-4 py-2 rounded-md">✨ Regenerate</button>
+            </div>
+             <p id="copy-feedback" class="text-sm text-green-600 text-right mt-2 hidden">Copied to clipboard!</p>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('.content-section');
+            let lastPrompt = '';
+
+            const entitiesData = {
+                global: [
+                    { name: 'Alpha Infinity Foundation', icon: '✨', mission: 'Global IP holder, spiritual custodian, and licensing agent for the ecosystem\'s foundational intellectual property.', structure: 'Charity (Company Limited by Guarantee)', role: 'Owns and licenses all foundational IP to Aura, GAJRA, and other entities. It is sovereign from the Straddie Sovereign Wealth Fund (SSWF) to maintain its global mission.' },
+                    { name: 'Aura of Intelligence', icon: '🧠', mission: 'Commercial enterprise for scalable wellness services, including NDIS support, cognitive science, care-tech, and AI-driven health interfaces.', structure: 'Enterprise (Pty Ltd)', role: 'A global-purpose service provider that may license content or lease space on Minjerribah via the SSWF, connecting local wellness initiatives to a global market.' },
+                    { name: 'GAJRA Earth', icon: '🌐', mission: 'A "DAO-Bridge" for global diplomacy, regenerative tourism, and event systems. It manages the ecosystem\'s global narrative and token ecosystem.', structure: 'DAO-Bridge (Company Limited by Guarantee)', role: 'Runs the global DAO and tourism platform. While it may sponsor local events, it retains control of its global IP and governance.' },
+                    { name: '500 Queens Venture Capital', icon: '👑', mission: 'A feminine-led planetary venture capital fund designed to invest in civilisation-scale innovations and deep-tech solutions globally.', structure: 'Investment (Pty Ltd + Unit Trust)', role: 'The ecosystem\'s financial engine. It may invest in Minjerribah-based projects but retains its own independent governance and Limited Partners (LPs).' }
+                ],
+                local: [
+                    { name: 'Straddie Employment & Training Corporation (SETCo)', icon: '👥', mission: 'The island\'s central human resources hub, providing training, compliance management, and job pathways for locals via the "Straddie Everything App".', structure: 'Training Charity (Company Limited by Guarantee)', role: 'Acts as the central HR and talent DAO for the entire Straddie ecosystem, ensuring all entities are staffed with compliant, trained, and motivated individuals.' },
+                    { name: 'Quandamooka Intelligence (QI)', icon: '💻', mission: 'A technology and innovation hub inclusive of all people who call Quandamooka country home. It focuses on developing cutting-edge AI, software, and digital solutions in partnership with the ecosystem\'s entities.', structure: 'Technology & Innovation Hub (Pty Ltd)', role: 'Acts as a collaborative technology partner for other entities, co-designing and developing software for health-tech (Aura), energy management (Clean Energy Co.), and digital community platforms. It operates as a partner, not an overseer.' },
+                    { name: 'Straddie Sovereign Wealth Fund (SSWF)', icon: '💰', mission: 'A community discretionary trust designed to be the ultimate holder of all key physical, community-owned assets on the island.', structure: 'Community Trust + Pty Ltd Trustee', role: 'Captures and reinvests profits from local commercial activities, creating a closed-loop system for intergenerational wealth. It is firewalled from the global entities.' },
+                    { name: 'Sandworm Subterranean Systems', icon: '🐛', mission: 'An infrastructure company focused on tunnelling, sand processing, and building resilient subterranean systems to preserve the island\'s surface ecology.', structure: 'Infrastructure (Pty Ltd)', role: 'Co-develops underground infrastructure with the Clean Energy Co., turning excavated sand from a waste product into a valuable asset for circular manufacturing.' },
+                    { name: 'Straddie Clean Energy Co.', icon: '⚡️', mission: 'The island\'s energy utility, responsible for developing and managing microgrids, sand batteries, and a diverse portfolio of renewable energy sources.', structure: 'Energy (Pty Ltd)', role: 'Provides 24/7 clean power. The physical island-based energy systems are owned by the SSWF, while the company owns the exportable IP.' },
+                    { name: 'Sandy Sports Club', icon: '🏐', mission: 'An incorporated association focused on community wellbeing through sport, youth programs, cultural activation, and events like an outdoor cinema.', structure: 'Sport & Culture (Incorporated Association)', role: 'A key community interface, fully owned and managed within the SSWF framework. It is designed to deliver immediate, tangible benefits to residents and visitors.' }
+                ]
+            };
+            
+            const stakeholdersData = {
+                government: [
+                    { entity: 'All Entities', body: 'ACNC, ASIC, ATO', purpose: 'Core registration, charity status applications, and tax compliance for all ten entities.' },
+                    { entity: 'Straddie Clean Energy Co. & Sandworm Subterranean Systems', body: 'ARENA, CEFC, DCCEEW', purpose: 'Primary funding targets for novel energy R&D, pilot projects, and large-scale debt/equity financing.' },
+                    { entity: 'SETCo & Quandamooka Intelligence', body: 'National Indigenous Australians Agency (NIAA)', purpose: 'Essential partner for funding Indigenous-led ventures and training programs via the Indigenous Advancement Strategy (IAS).' },
+                    { entity: 'All Straddie Entities', body: 'QLD Gov (Treasury, State Dev, DES)', purpose: 'Accessing state-level funds (e.g., Minjerribah ETS Fund), and navigating planning and environmental approvals.' },
+                    { entity: 'Aura of Intelligence & Sandy Sports Club', body: 'Redland City Council', purpose: 'Primary authority for local planning, development approvals (DAs), and community project grants.' }
+                ],
+                community: [
+                    { entity: 'All Straddie Entities', body: 'Quandamooka Yoolooburrabee Aboriginal Corporation (QYAC)', purpose: 'The Prescribed Body Corporate and most critical cultural partner. Engagement must be founded on deep co-creation, respecting their cultural and legal authority and custodianship over Quandamooka Country.' },
+                    { entity: 'All Straddie Entities', body: 'Minjerribah Moorgumpin Elders-in-Council Aboriginal Corporation (MMEIC)', purpose: 'A vital council of Elders providing cultural guidance and ensuring projects align with the long-term wellbeing of the community and Country. Engagement must be respectful, seeking their wisdom on cultural protocols, community benefit, and sustainable economic pathways.' },
+                    { entity: 'Aura of Intelligence', body: 'Anglican Church Southern Queensland (ACSQ)', purpose: 'Pivotal early partner for the proposed wellness centre site. Engagement focuses on mission alignment and partnership with Anglicare.' },
+                    { entity: 'Sandy Sports Club', body: 'Quandamooka Film Festival & Local Schools', purpose: 'Partnerships to co-deliver cultural events, youth programs, and activate the community space.' }
+                ],
+                private: [
+                    { entity: 'Straddie Clean Energy Co. & Sandworm Subterranean Systems', body: 'UQ, QUT (Research)', purpose: 'Formal partnerships for technical validation, collaborative R&D in marine science, energy storage, and engineering.' },
+                    { entity: '500 Queens Venture Capital & Tech Ventures', body: 'Climate Tech VCs (Virescent, Pollination)', purpose: 'Target investors with specific mandates for early-stage, high-impact climate solutions and the expertise to scale them.' },
+                    { entity: 'All Entities', body: 'Impact Investors & Philanthropic Foundations', purpose: 'Targeting funds focused on Indigenous economic empowerment (IBA) and foundations with environmental/social mandates (Ian Potter, Myer).' },
+                    { entity: 'Quandamooka Intelligence', body: 'Australian Information Industry Association (AIIA)', purpose: 'Engagement with the peak industry body for advocacy, networking, and best practice standards in the tech sector.' }
+                ]
+            };
+
+            const timelineData = [
+                {
+                    quarter: 'Q1: Blitz Setup & Foundation',
+                    duration: 'Months 1-3',
+                    focus: 'Establish the complete legal, governance, and financial foundation. Launch all initial outreach.',
+                    actions: [
+                        'Simultaneously register all 10 legal entities with outsourced legal support.',
+                        'Appoint initial cohort of ~15 directors to cover all governance roles.',
+                        'Execute all trust deeds, constitutions, and operating agreements.',
+                        'Submit priority grant applications (ARENA, NIAA, etc.) and file for charity status.',
+                        'Launch intensive, parallel consultation with QYAC, MMEIC, and Council.',
+                        'Begin 500QVC & GAJRA Earth investor engagement and DAO logic mapping.'
+                    ]
+                },
+                {
+                    quarter: 'Q2: MVP Launch & Pilot Activation',
+                    duration: 'Months 4-6',
+                    focus: 'Move from planning to practice. Get the first tangible products and services into the community.',
+                    actions: [
+                        'Launch MVP of the "Straddie Everything App" with SETCo for initial user testing.',
+                        'Activate first service pilots for Aura of Intelligence (e.g., wellness workshops).',
+                        'Quandamooka Intelligence begins co-design sprints with partner entities.',
+                        'Finalize engineering designs for initial energy & infrastructure pilots.',
+                        'Launch grassroots community fundraising ("Pack Ladder") to build momentum.',
+                        'Sandy Sports Club begins offering initial programs and events.'
+                    ]
+                },
+                {
+                    quarter: 'Q3: Early Revenue & Ground-Breaking',
+                    duration: 'Months 7-9',
+                    focus: 'Generate first revenue and begin physical construction to demonstrate viability.',
+                    actions: [
+                        'Break ground on first pilot infrastructure (e.g., small-scale bladeless energy converter).',
+                        'Generate first revenue from Sandy Sports Club activities and Aura service pilots.',
+                        'Harden the "Everything App" based on user feedback from the entire island.',
+                        'Use initial pilot performance data to approach CEFC and other debt financiers.',
+                        'Secure formal partnership agreements with research institutions (UQ, QUT).'
+                    ]
+                },
+                {
+                    quarter: 'Q4: System Integration & Scaling',
+                    duration: 'Months 10-12',
+                    focus: 'Prove the interoperability of the ecosystem and prepare for major scaling in Year 2.',
+                    actions: [
+                        'First electricity from pilot projects sold to the grid, proving the model.',
+                        'Straddie Sovereign Wealth Fund (SSWF) becomes operational, receiving first profits.',
+                        'Demonstrate integrated value chain (e.g., Sandworm providing materials for Clean Energy Co.).',
+                        'Secure major financing round (debt/equity) for full-scale infrastructure build-out.',
+                        'Finalize the first "Minjerribah Playbook" for global replication via the Queens System.'
+                    ]
+                }
+            ];
+
+            function handleNavClick(e) {
+                navLinks.forEach(link => link.classList.remove('active'));
+                e.target.classList.add('active');
+
+                sections.forEach(section => section.classList.remove('active'));
+                const targetSection = document.getElementById(e.target.dataset.target);
+                if (targetSection) {
+                    targetSection.classList.add('active');
+                }
+            }
+
+            navLinks.forEach(link => link.addEventListener('click', handleNavClick));
+
+            function createEntityCard(entity) {
+                const entityDataString = `data-name="${entity.name}" data-mission="${entity.mission}" data-structure="${entity.structure}" data-role="${entity.role}"`;
+                return `
+                    <div class="card bg-white rounded-2xl overflow-hidden shadow-sm">
+                        <div class="card-header p-6 flex justify-between items-center">
+                            <div class="flex items-center space-x-4">
+                                <span class="text-3xl">${entity.icon}</span>
+                                <div>
+                                    <h4 class="text-xl font-semibold text-[#6B5B50]">${entity.name}</h4>
+                                    <p class="text-sm text-gray-500">${entity.structure}</p>
+                                </div>
+                            </div>
+                            <span class="text-2xl text-gray-400 transform transition-transform duration-500 arrow">▼</span>
+                        </div>
+                        <div class="card-content px-6 pb-6">
+                            <p class="text-gray-700 mb-4">${entity.mission}</p>
+                            <div class="p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+                                <h5 class="font-semibold text-[#A47F6A] mb-1">Role in Ecosystem</h5>
+                                <p class="text-sm text-gray-600">${entity.role}</p>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <button class="gemini-button director-profile-button w-full text-sm font-medium py-2 px-4 rounded-md" ${entityDataString}>
+                                    ✨ Dir. Profile
+                                </button>
+                                <button class="gemini-button pitch-button w-full text-sm font-medium py-2 px-4 rounded-md" ${entityDataString}>
+                                    ✨ Gen. Pitch
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function renderEntities() {
+                const container = document.getElementById('entities-container');
+                let html = `
+                    <div>
+                        <h3 class="text-2xl font-bold text-[#A47F6A] mb-4 pl-2 border-l-4 border-[#A47F6A]">Global Purpose Entities</h3>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            ${entitiesData.global.map(createEntityCard).join('')}
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-[#A47F6A] mb-4 pl-2 border-l-4 border-[#A47F6A]">Sovereign-Straddie Entities</h3>
+                         <div class="grid md:grid-cols-2 gap-6">
+                            ${entitiesData.local.map(createEntityCard).join('')}
+                        </div>
+                    </div>
+                `;
+                container.innerHTML = html;
+
+                container.querySelectorAll('.card-header').forEach(header => {
+                    header.addEventListener('click', () => {
+                        const card = header.parentElement;
+                        card.classList.toggle('open');
+                        card.querySelector('.arrow').classList.toggle('rotate-180');
+                    });
+                });
+                
+                document.querySelectorAll('.director-profile-button').forEach(button => button.addEventListener('click', handleDirectorProfileClick));
+                document.querySelectorAll('.pitch-button').forEach(button => button.addEventListener('click', handlePitchClick));
+                
+                // Populate risk analysis selector
+                const riskSelector = document.getElementById('risk-analysis-selector');
+                [...entitiesData.global, ...entitiesData.local].forEach(entity => {
+                    const option = document.createElement('option');
+                    option.value = entity.name;
+                    option.textContent = entity.name;
+                    riskSelector.appendChild(option);
+                });
+
+            }
+
+            function renderLegalChart() {
+                const ctx = document.getElementById('legalStructureChart').getContext('2d');
+                const structures = [...entitiesData.global, ...entitiesData.local].map(e => e.structure);
+                const counts = structures.reduce((acc, value) => {
+                    acc[value] = (acc[value] || 0) + 1;
+                    return acc;
+                }, {});
+
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(counts),
+                        datasets: [{
+                            data: Object.values(counts),
+                            backgroundColor: ['#6B5B50', '#A47F6A', '#D1C4B7', '#8E8071', '#BCAE9F', '#A99A8E'],
+                            borderColor: '#FDFBF8',
+                            borderWidth: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: {
+                                        family: 'Inter',
+                                        size: 12
+                                    },
+                                    color: '#3D3D3D'
+                                }
+                            },
+                            tooltip: {
+                                bodyFont: {
+                                    family: 'Inter'
+                                },
+                                titleFont: {
+                                    family: 'Inter'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function renderStakeholders(tab = 'government') {
+                const container = document.getElementById('stakeholders-content');
+                const data = stakeholdersData[tab];
+                let html = `
+                    <div class="space-y-4">
+                        ${data.map(item => {
+                             const itemDataString = `data-body="${item.body}" data-entity="${item.entity}" data-purpose="${item.purpose}"`;
+                             return `
+                            <div class="p-4 border border-gray-200 rounded-lg">
+                                <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                                    <div>
+                                        <h4 class="font-bold text-lg text-[#6B5B50]">${item.body}</h4>
+                                        <p class="text-sm text-gray-500 mb-2">Relevant for: <span class="font-medium text-[#A47F6A]">${item.entity}</span></p>
+                                    </div>
+                                    <button class="gemini-button draft-email-button text-sm font-medium py-2 px-4 rounded-md flex-shrink-0" ${itemDataString}>
+                                        ✨ Draft Email
+                                    </button>
+                                </div>
+                                <p class="text-gray-700 mt-2">${item.purpose}</p>
+                            </div>
+                        `}).join('')}
+                    </div>
+                `;
+                container.innerHTML = html;
+                document.querySelectorAll('.draft-email-button').forEach(button => {
+                    button.addEventListener('click', handleDraftEmailClick);
+                });
+            }
+
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderStakeholders(e.target.dataset.tab);
+                });
+            });
+
+            function renderFundingChart() {
+                const ctx = document.getElementById('fundingChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Phase A: Seed & Feasibility', 'Phase B: Pilot & Growth', 'Phase C: Scale & Maturity'],
+                        datasets: [
+                            {
+                                label: 'Grants & Community',
+                                data: [100, 40, 10],
+                                backgroundColor: '#A47F6A',
+                            },
+                            {
+                                label: 'Debt & Infrastructure Finance',
+                                data: [0, 60, 40],
+                                backgroundColor: '#8E8071',
+                            },
+                            {
+                                label: 'VC & Institutional',
+                                data: [0, 0, 50],
+                                backgroundColor: '#6B5B50',
+                            }
+                        ]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                stacked: true,
+                                grid: { display: false },
+                                ticks: { display: false },
+                                border: { display: false }
+                            },
+                            y: {
+                                stacked: true,
+                                grid: { display: false },
+                                ticks: {
+                                    font: {
+                                        family: 'Inter',
+                                        size: 12,
+                                        weight: '500'
+                                    },
+                                    color: '#3D3D3D'
+                                },
+                                border: { display: false }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    font: {
+                                        family: 'Inter'
+                                    },
+                                    color: '#3D3D3D'
+                                }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ' + context.formattedValue + '%';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function renderTimeline() {
+                const container = document.getElementById('timeline-container');
+                let html = timelineData.map(item => `
+                    <div class="timeline-item">
+                        <h4 class="font-bold text-lg text-[#6B5B50]">${item.quarter}</h4>
+                        <p class="text-sm font-medium text-gray-500 mb-2">${item.duration} - <span class="italic">${item.focus}</span></p>
+                        <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                            ${item.actions.map(action => `<li>${action}</li>`).join('')}
+                        </ul>
+                    </div>
+                `).join('');
+                container.innerHTML = html;
+            }
+
+            // AI Modal and Gemini API Logic
+            const modal = document.getElementById('ai-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalContent = document.getElementById('modal-content');
+            const loader = document.getElementById('modal-loader');
+
+            function showModal(title) {
+                modalTitle.textContent = title;
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+
+            function hideModal() {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                modalContent.value = '';
+                lastPrompt = '';
+            }
+            
+            document.getElementById('close-modal-button').addEventListener('click', hideModal);
+            document.getElementById('regenerate-modal-button').addEventListener('click', () => {
+                if (lastPrompt) {
+                    callGeminiAPI(lastPrompt);
+                }
+            });
+            document.getElementById('copy-modal-button').addEventListener('click', () => {
+                modalContent.select();
+                document.execCommand('copy');
+                const feedback = document.getElementById('copy-feedback');
+                feedback.classList.remove('hidden');
+                setTimeout(() => {
+                    feedback.classList.add('hidden');
+                }, 2000);
+            });
+
+            async function callGeminiAPI(prompt, retries = 3, delay = 1000) {
+                loader.classList.remove('hidden');
+                modalContent.value = '';
+                lastPrompt = prompt;
+
+                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                const payload = { contents: chatHistory };
+                const apiKey = ""; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`API call failed with status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        modalContent.value = text.trim();
+                    } else {
+                        modalContent.value = "Error: Could not generate a response. The model's response was empty. Please try again.";
+                    }
+                } catch (error) {
+                     if (retries > 0) {
+                        await new Promise(res => setTimeout(res, delay));
+                        return callGeminiAPI(prompt, retries - 1, delay * 2);
+                    } else {
+                        modalContent.value = `An error occurred: ${error.message}. Please check your connection and try again.`;
+                    }
+                } finally {
+                    loader.classList.add('hidden');
+                }
+            }
+            
+            function handleDraftEmailClick(e) {
+                const { body, entity, purpose } = e.target.dataset;
+                const title = `Draft Email to ${body}`;
+                let prompt;
+
+                if (body.includes('QYAC')) {
+                    prompt = `You are a strategic communications expert specializing in respectful engagement with First Nations groups in Australia. Draft a professional, concise, and compelling introductory email to the Quandamooka Yoolooburrabee Aboriginal Corporation (QYAC).
+
+The email is on behalf of the project related to: ${entity}.
+The primary goal of this outreach is: ${purpose}.
+
+The email MUST be deeply respectful of QYAC's role as the Prescribed Body Corporate and custodians of Country. It should emphasize a commitment to genuine co-creation and listening, propose an introductory meeting to share our vision and learn from them, and be under 200 words. The tone must be humble and collaborative, not extractive.`;
+                } else if (body.includes('MMEIC')) {
+                     prompt = `You are a strategic communications expert specializing in respectful engagement with First Nations Elders in Australia. Draft a professional, concise, and compelling introductory email to the Minjerribah Moorgumpin Elders-in-Council Aboriginal Corporation (MMEIC).
+
+The email is on behalf of the project related to: ${entity}.
+The primary goal of this outreach is: ${purpose}.
+
+The email MUST be deeply respectful of the Elders' role as wisdom keepers for the community and Country. It should not be a business proposal, but a humble request to listen and learn. The purpose is to seek their guidance, ensure our projects align with cultural values, and ask for their blessing and oversight. Propose a meeting at their convenience to introduce ourselves and our intentions. The tone must be one of utmost respect and deference. Keep it under 200 words.`;
+                } else {
+                    prompt = `You are a strategic communications expert for an ambitious regenerative project in Australia. Draft a professional, concise, and compelling introductory email to ${body}.
+                    
+The email is on behalf of the project related to: ${entity}.
+The primary goal of this outreach is: ${purpose}.
+
+The email should be respectful, clearly state the purpose, propose a brief introductory meeting to discuss potential collaboration, and be under 200 words.
+Context: The project is part of a larger ecosystem on Minjerribah (North Stradbroke Island) focused on creating a sovereign, regenerative economy with global-scale ventures.`;
+                }
+                
+                showModal(title);
+                callGeminiAPI(prompt);
+            }
+
+            function handleDirectorProfileClick(e) {
+                const { name, structure, mission, role } = e.target.dataset;
+                const title = `Director Profile for ${name}`;
+                const prompt = `You are an expert in corporate governance and executive recruitment for impact-driven organizations. Based on the following information for a new Australian company, generate a compelling and detailed role description for a potential Board Director.
+
+Company Name: ${name}
+Legal Structure: ${structure}
+Mission: ${mission}
+Role in Ecosystem: ${role}
+
+The description should be structured with clear headings and outline:
+1.  **The Opportunity:** A compelling summary of the role and its significance.
+2.  **Key Responsibilities:** Bullet points covering governance, strategic oversight, financial stewardship, and stakeholder engagement.
+3.  **Ideal Candidate Profile:** Bullet points detailing desired skills and experience (e.g., industry-specific knowledge, financial acumen, governance experience, community connection, entrepreneurial mindset).
+4.  **Time Commitment & Remuneration:** A realistic estimate.
+
+Emphasize the unique opportunity to be part of a groundbreaking regenerative ecosystem on Minjerribah (North Stradbroke Island).`;
+
+                showModal(title);
+                callGeminiAPI(prompt);
+            }
+            
+            function handlePitchClick(e) {
+                const { name, mission, role } = e.target.dataset;
+                const title = `Elevator Pitch for ${name}`;
+                const prompt = `You are a world-class pitch writer. Generate three distinct 60-second elevator pitches for "${name}".
+
+The company's mission is: "${mission}".
+Its role in the ecosystem is: "${role}".
+
+Create one pitch for each of the following audiences, tailoring the language, focus, and call-to-action for each:
+1.  **A venture capital investor:** Focus on the market opportunity, scalability, and return on investment.
+2.  **A potential community partner on Minjerribah:** Focus on local benefits, job creation, and alignment with community values.
+3.  **A potential employee or technical expert:** Focus on the exciting challenge, the innovative technology, and the impact they can make.
+
+Format the output with clear headings for each audience.`;
+                showModal(title);
+                callGeminiAPI(prompt);
+            }
+
+            document.getElementById('grant-snippet-button').addEventListener('click', () => {
+                const title = 'Draft Grant Application Snippet';
+                const prompt = `You are an expert grant writer specializing in Australian climate and Indigenous enterprise funding. Draft a compelling 250-word executive summary for a grant application to a major Australian funding body like ARENA or NIAA.
+
+The application is for the "Sovereign-Cosmic Ecosystem" project on Minjerribah (North Stradbroke Island).
+
+The summary must concisely cover:
+1.  **The Vision:** A sovereign, regenerative local economy powered by clean energy and circular economy principles, developed in deep partnership with the Quandamooka people.
+2.  **The Innovation:** The integration of bladeless tidal/wave energy, sand batteries, and an inclusive, locally-focused technology hub (Quandamooka Intelligence).
+3.  **The Impact:** Measurable outcomes including energy independence, new jobs, environmental restoration, and a globally scalable model for community wealth creation.
+4.  **The Ask:** Funding to support the initial pilot and infrastructure phase to de-risk the technology and prove commercial viability.
+
+The tone should be professional, ambitious, and grounded in tangible outcomes.`;
+                showModal(title);
+                callGeminiAPI(prompt);
+            });
+
+            document.getElementById('risk-analysis-button').addEventListener('click', () => {
+                const selector = document.getElementById('risk-analysis-selector');
+                const selectedEntityName = selector.value;
+                let title, prompt;
+
+                if (selectedEntityName === 'all') {
+                    title = 'Risk Analysis for the Entire Ecosystem';
+                    prompt = `You are a strategic risk management consultant for complex, multi-stakeholder projects. Conduct a high-level risk analysis for the entire 10-company "Sovereign-Cosmic Ecosystem" on Minjerribah.
+
+Identify the top 5-7 strategic risks that could impact the ecosystem as a whole. For each risk, provide:
+1.  **Risk Category:** (e.g., Financial, Regulatory, Community Relations, Operational, Environmental).
+2.  **Risk Description:** A clear, concise explanation of the risk.
+3.  **Potential Impact:** The consequences if the risk materializes.
+4.  **Proposed Mitigation Strategy:** Actionable steps to reduce the likelihood or impact of the risk.
+
+A key risk to analyze is the relationship between key community stakeholders like QYAC and the Minjerribah Moorgumpin Elders-in-Council (MMEIC); address this with sensitivity, acknowledging their distinct and vital roles. Focus on systemic risks that arise from the interaction between the entities and their environment.`;
+                } else {
+                    const allEntities = [...entitiesData.global, ...entitiesData.local];
+                    const entity = allEntities.find(e => e.name === selectedEntityName);
+                    title = `Risk Analysis for ${entity.name}`;
+                    prompt = `You are a strategic risk management consultant. Conduct a preliminary risk analysis for the following Australian entity:
+
+**Company Name:** ${entity.name}
+**Mission:** ${entity.mission}
+**Legal Structure:** ${entity.structure}
+**Role in Ecosystem:** ${entity.role}
+
+Based on this profile, identify the top 5 key risks. Structure the output clearly. For each risk, detail:
+1.  **Risk Category:** (e.g., Financial, Regulatory, Community, Operational, Technical, Environmental).
+2.  **Risk Description:** A clear, concise explanation of the risk specific to this company.
+3.  **Proposed Mitigation Strategy:** An actionable step to address the risk.`;
+                }
+                
+                showModal(title);
+                callGeminiAPI(prompt);
+            });
+
+
+            // Initial Renders
+            renderEntities();
+            renderLegalChart();
+            renderStakeholders();
+            renderFundingChart();
+            renderTimeline();
+        });
+    </script>
+</body>
+</html>
